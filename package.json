@@ -2,6 +2,7 @@
   "name": "repo-goblin",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "tsx src/cli.ts",
     "dev:server": "tsx src/mcp/server.ts",
