@@ -6,6 +6,7 @@ import * as z from 'zod/v4'
 import type { GoblinConfig} from "../config.js";
 import { readRepositoryFile } from "./tools/read-file.js";
 import { listRepositoryFiles } from "./tools/list-files.js";
+import {searchRepositoryCode} from "./tools/search_code.js";
 
 const targetPath = process.argv[2]
 
@@ -73,6 +74,35 @@ server.registerTool(
                 {
                     type: 'text',
                     text: files.join('\n')
+                }
+            ]
+        }
+    }
+)
+
+server.registerTool(
+    'search_code',
+    {
+        description: 'Search repository text using a ripgrep regular expression and return matching lines',
+        inputSchema: z.object({
+            query: z.string().min(1).max(200),
+            maxResults: z.number().int().min(1).max(200).default(50)
+        })
+    },
+    async ({ query, maxResults }) => {
+        const matches = await searchRepositoryCode(
+            config,
+            query,
+            maxResults
+        )
+
+        return {
+            content: [
+                {
+                    type: 'text',
+                    text: matches.length > 0
+                        ? matches.join('\n')
+                        : 'No matches found.'
                 }
             ]
         }

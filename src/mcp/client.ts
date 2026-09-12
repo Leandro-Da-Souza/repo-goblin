@@ -43,10 +43,25 @@ try {
     //     },
     // })
 
+    // const result = await client.callTool({
+    //     name: 'list_files',
+    //     arguments: {
+    //         maxResults: 30
+    //     }
+    // })
+
+    // const result = await client.callTool({
+    //     name: 'search_code',
+    //     arguments: {
+    //         query: 'getCombosByDiscipline',
+    //         maxResults: 20
+    //     }
+    // })
+
     const result = await client.callTool({
-        name: 'list_files',
+        name: 'search_code',
         arguments: {
-            maxResults: 30
+            query: 'definitelyDoesNotExist',
         }
     })
 
