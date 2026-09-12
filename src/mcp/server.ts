@@ -5,6 +5,7 @@ import * as z from 'zod/v4'
 
 import type { GoblinConfig} from "../config.js";
 import { readRepositoryFile } from "./tools/read-file.js";
+import { listRepositoryFiles } from "./tools/list-files.js";
 
 const targetPath = process.argv[2]
 
@@ -41,6 +42,37 @@ server.registerTool(
                 {
                     type: 'text',
                     text: contents
+                }
+            ]
+        }
+    }
+)
+
+server.registerTool(
+    'list_files',
+    {
+        description:
+            'List source and project files inside the target repository.',
+        inputSchema: z.object({
+            maxResults: z
+                .number()
+                .int()
+                .min(1)
+                .max(500)
+                .default(200),
+        }),
+    },
+    async ({ maxResults }) => {
+        const files = await listRepositoryFiles(
+            config,
+            maxResults
+        )
+
+        return {
+            content: [
+                {
+                    type: 'text',
+                    text: files.join('\n')
                 }
             ]
         }

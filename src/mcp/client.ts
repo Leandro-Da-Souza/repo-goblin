@@ -36,11 +36,18 @@ try {
         console.log(`- ${tool.name}: ${tool.description}`)
     }
 
+    // const result = await client.callTool({
+    //     name: 'read_file',
+    //     arguments: {
+    //         path: 'README.md',
+    //     },
+    // })
+
     const result = await client.callTool({
-        name: 'read_file',
+        name: 'list_files',
         arguments: {
-            path: 'README.md',
-        },
+            maxResults: 30
+        }
     })
 
     console.log('\nTool result:')
