@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx src/cli.ts",
     "dev:server": "tsx src/mcp/server.ts",
+    "dev:client": "tsx src/mcp/client.ts",
     "build": "tsc",
     "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit"

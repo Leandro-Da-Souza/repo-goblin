@@ -18,7 +18,7 @@ const config: GoblinConfig = {
 }
 
 const server = new McpServer({
-    name: 'repo-goblin',
+    name: 'repo-goblin-server',
     version: '0.1.0'
 })
 
