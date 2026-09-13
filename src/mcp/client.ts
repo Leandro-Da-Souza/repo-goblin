@@ -3,7 +3,7 @@ import 'dotenv/config'
 import { Client } from '@modelcontextprotocol/client'
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { createOpenAIClient } from "../model/openai-client.js";
-import {parseToolArguments} from "../utils.js";
+import { executeToolCalls } from "../utils.js";
 
 const repositoryPath = process.argv[2]
 
@@ -55,7 +55,7 @@ try {
         strict: false
     }))
 
-    const response = await openai.responses.create({
+    let response = await openai.responses.create({
         model,
         instructions: [
             'You are a read-only repository investigator.',
@@ -70,52 +70,36 @@ try {
         tool_choice: 'required'
     })
 
-    const toolOutputs = []
+    const MAX_ROUNDS = 8;
+    let completed = false
 
-    for (const item of response.output) {
-        if (item.type !== 'function_call') {
-            continue
+    for (let round = 0; round < MAX_ROUNDS; round++) {
+        console.log(`Goblin round ${round +1}/${MAX_ROUNDS}`)
+
+        const toolOutputs = await executeToolCalls(
+            response.output,
+            availableToolNames,
+            client
+        )
+
+        if(toolOutputs.length === 0) {
+            console.log(response.output_text)
+            completed = true
+            break
         }
 
-        if (!availableToolNames.has(item.name)) {
-            throw new Error(
-                `Model requested unavailable tool: ${item.name}`
-            )
-        }
-
-        const args = parseToolArguments(item.arguments)
-
-        console.log(`Goblin calls: ${item.name}`)
-        console.log(`Arguments: ${JSON.stringify(args)}`)
-
-        const toolResult = await client.callTool({
-            name: item.name,
-            arguments: args
-        })
-
-        toolOutputs.push({
-            type: 'function_call_output' as const,
-            call_id: item.call_id,
-            output: JSON.stringify(toolResult)
-        })
-    }
-
-    if (toolOutputs.length === 0) {
-        console.log(response.output_text)
-    } else {
-        const nextResponse = await openai.responses.create({
+        response = await openai.responses.create({
             model,
             previous_response_id: response.id,
             input: toolOutputs,
             tools: modelTools,
             tool_choice: 'auto'
         })
-
-        console.dir(nextResponse.output, {
-            depth: null
-        })
     }
 
+    if(!completed) {
+        console.error(`Goblin stopped after reaching the ${MAX_ROUNDS}-round limit.`)
+    }
 } finally {
     await client.close()
 }
