@@ -1,4 +1,4 @@
-# Repo Goblin
+# Repo Goblin 🧌
 
 Repo Goblin is a small, read-only repository investigation agent built as a weekend project for exploring:
 
