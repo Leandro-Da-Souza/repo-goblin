@@ -4,6 +4,8 @@ import { Client } from '@modelcontextprotocol/client'
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { createOpenAIClient } from "../model/openai-client.js";
 import { executeToolCalls } from "../utils.js";
+import {createRunMetrics} from "../agent/metrics.js";
+import {RUN_BUDGET} from "../agent/budget.js";
 
 const repositoryPath = process.argv[2]
 
@@ -42,6 +44,9 @@ try {
     await client.connect(transport)
 
     const { tools } = await client.listTools()
+    const metrics = createRunMetrics()
+    const { maxRounds, maxToolCalls } = RUN_BUDGET
+    let completed = false
 
     const availableToolNames = new Set(
         tools.map((tool) => tool.name)
@@ -54,6 +59,8 @@ try {
         parameters: tool.inputSchema,
         strict: false
     }))
+
+    metrics.recordModelRequest()
 
     let response = await openai.responses.create({
         model,
@@ -70,16 +77,28 @@ try {
         tool_choice: 'required'
     })
 
-    const MAX_ROUNDS = 8;
-    let completed = false
+    let round = 0
 
-    for (let round = 0; round < MAX_ROUNDS; round++) {
-        console.log(`Goblin round ${round +1}/${MAX_ROUNDS}`)
+    for (; round < maxRounds; round++) {
+        console.log(`Goblin round ${round +1}/${maxRounds}`)
+
+        const pendingToolCalls = response.output.filter(
+            (item) => item.type === 'function_call'
+        ).length
+
+        if ((metrics.getSnapshot().toolCalls + pendingToolCalls) > maxToolCalls) {
+            console.error(
+                `Goblin stopped: executing ${pendingToolCalls} more tools ` +
+                `would exceed the ${maxToolCalls}-tool-call budget.`,
+            )
+            break
+        }
 
         const toolOutputs = await executeToolCalls(
             response.output,
             availableToolNames,
-            client
+            client,
+            metrics.recordToolCall
         )
 
         if(toolOutputs.length === 0) {
@@ -87,6 +106,8 @@ try {
             completed = true
             break
         }
+
+        metrics.recordModelRequest()
 
         response = await openai.responses.create({
             model,
@@ -97,9 +118,14 @@ try {
         })
     }
 
-    if(!completed) {
-        console.error(`Goblin stopped after reaching the ${MAX_ROUNDS}-round limit.`)
+    if (!completed && round === maxRounds) {
+        console.error(`Goblin stopped after reaching the ${maxRounds}-round limit.`)
     }
+
+    console.log('Run metrics:')
+    console.dir(metrics.getSnapshot(), {
+        depth: null,
+    })
 } finally {
     await client.close()
 }

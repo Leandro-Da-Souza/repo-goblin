@@ -22,7 +22,8 @@ export function parseToolArguments(
 export async function executeToolCalls(
     output: ResponseOutputItem[],
     availableToolNames: Set<string>,
-    client: Client
+    client: Client,
+    recordToolCall: (name: string) => void
 ) {
     const toolOutputs = []
 
@@ -34,6 +35,8 @@ export async function executeToolCalls(
         if(!availableToolNames.has(item.name)) {
             throw new Error(`Model requested unavailable tool: ${item.name}`)
         }
+
+        recordToolCall(item.name)
 
         const args = parseToolArguments(item.arguments)
 
